@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedDeque - Sistema de Triagem</title>
+  <link rel="stylesheet" href="style/index.css">
+</head>
+<script>
+document.querySelector("form").addEventListener("submit", function (e) {
+  e.preventDefault();
+
+  const nome = document.querySelector("input[name='nome']").value;
+  const cpf = document.querySelector("input[name='cpf']").value;
+  const sintomas = document.querySelector("textarea[name='sintomas']").value;
+  const gravidade = parseInt(document.querySelector("select[name='gravidade']").value);
+
+  const novoPaciente = { nome, cpf, sintomas, gravidade };
+
+  const pacientes = JSON.parse(localStorage.getItem("pacientes")) || [];
+  pacientes.push(novoPaciente);
+  localStorage.setItem("pacientes", JSON.stringify(pacientes));
+
+  alert("Triagem registrada com sucesso!");
+  document.querySelector("form").reset();
+});
+</script>
+<body>
+  <div class="container">
+  <img src="img/Med.png" alt="Logo MedDeque" class="logo-icon">
+  <h1 class="title">SISTEMA DE TRIAGEM</h1>
+  <button class="menu-button" onclick="window.location.href='triagem/triagem.html'">Iniciar Triagem</button>
+  <button class="menu-button" onclick="window.location.href='triagem/listagem.html'">
+  Histórico de Pacientes
+  </button>
+
+</div>
+
+</body>
+</html>
