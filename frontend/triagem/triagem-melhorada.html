@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Triagem de Paciente - MedDeque</title>
+  <link rel="stylesheet" href="../style/index.css">
+  <link rel="stylesheet" href="../style/components.css">
+  <link rel="stylesheet" href="triagem.css">
+</head>
+
+<body>
+  <div class="container">
+    <img src="../img/Med.png" alt="Logo MedDeque" class="logo-icon">
+    <h1 class="title">Triagem de Paciente</h1>
+    
+    <form id="form-triagem">
+      <div>
+        <label for="nome">Nome completo:</label>
+        <input type="text" id="nome" name="nome" placeholder="Digite o nome do paciente" required>
+        <div class="mensagem-erro" id="erro-nome"></div>
+      </div>
+
+      <div>
+        <label for="cpf">CPF:</label>
+        <input type="text" id="cpf" name="cpf" placeholder="000.000.000-00" maxlength="14" required>
+        <div class="mensagem-erro" id="erro-cpf"></div>
+      </div>
+
+      <div>
+        <label for="sintomas">Sintomas:</label>
+        <textarea id="sintomas" name="sintomas" rows="3" placeholder="Descreva os sintomas..." required></textarea>
+        <div class="mensagem-erro" id="erro-sintomas"></div>
+      </div>
+
+      <div>
+        <label for="gravidade">Gravidade:</label>
+        <select id="gravidade" name="gravidade" required>
+          <option value="">Selecione a gravidade</option>
+          <option value="1">🔴 Vermelha (Alta prioridade)</option>
+          <option value="2">🟡 Amarela (Média prioridade)</option>
+          <option value="3">🟢 Verde (Baixa prioridade)</option>
+        </select>
+        <div class="mensagem-erro" id="erro-gravidade"></div>
+      </div>
+
+      <button type="submit" class="submit-button" id="btn-submit">
+        <span id="texto-submit">Registrar Triagem</span>
+        <span id="loading-submit" class="loading" style="display: none;"></span>
+      </button>
+    </form>
+
+    <button class="btn-secundario" onclick="window.location.href='listagem-melhorada.html'">
+      📋 Ver Pacientes Cadastrados
+    </button>
+    
+    <button class="btn-secundario" onclick="window.location.href='../index.html'">
+      🏠 Voltar ao Menu
+    </button>
+  </div>
+
+  <script src="../js/utils.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const form = document.getElementById("form-triagem");
+      const cpfInput = document.getElementById("cpf");
+      
+      // Formatação automática do CPF
+      cpfInput.addEventListener("input", function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 11) {
+          e.target.value = Utils.formatarCPF(value);
+        }
+      });
+
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        
+        if (!validarFormulario()) {
+          return;
+        }
+
+        const btnSubmit = document.getElementById("btn-submit");
+        const textoSubmit = document.getElementById("texto-submit");
+        const loadingSubmit = document.getElementById("loading-submit");
+        
+        // Mostrar loading
+        btnSubmit.disabled = true;
+        textoSubmit.style.display = "none";
+        loadingSubmit.style.display = "inline-block";
+
+        try {
+          const paciente = {
+            nome: document.getElementById("nome").value.trim(),
+            cpf: document.getElementById("cpf").value.replace(/\D/g, ''),
+            sintomas: document.getElementById("sintomas").value.trim(),
+            gravidade: parseInt(document.getElementById("gravidade").value)
+          };
+
+          await ApiService.cadastrarPaciente(paciente);
+          
+          Utils.mostrarNotificacao("Triagem registrada com sucesso!", "sucesso");
+          form.reset();
+          
+        } catch (error) {
+          Utils.mostrarNotificacao("Erro ao registrar triagem. Tente novamente.", "erro");
+        } finally {
+          // Esconder loading
+          btnSubmit.disabled = false;
+          textoSubmit.style.display = "inline";
+          loadingSubmit.style.display = "none";
+        }
+      });
+    });
+
+    function validarFormulario() {
+      let valido = true;
+      
+      // Limpar erros anteriores
+      document.querySelectorAll('.campo-erro').forEach(campo => {
+        campo.classList.remove('campo-erro');
+      });
+      document.querySelectorAll('.mensagem-erro').forEach(erro => {
+        erro.textContent = '';
+      });
+
+      // Validar nome
+      const nome = document.getElementById("nome").value.trim();
+      if (nome.length < 2) {
+        mostrarErro("nome", "Nome deve ter pelo menos 2 caracteres");
+        valido = false;
+      }
+
+      // Validar CPF
+      const cpf = document.getElementById("cpf").value;
+      if (!Utils.validarCPF(cpf)) {
+        mostrarErro("cpf", "CPF inválido");
+        valido = false;
+      }
+
+      // Validar sintomas
+      const sintomas = document.getElementById("sintomas").value.trim();
+      if (sintomas.length < 10) {
+        mostrarErro("sintomas", "Descreva os sintomas com mais detalhes (mín. 10 caracteres)");
+        valido = false;
+      }
+
+      // Validar gravidade
+      const gravidade = document.getElementById("gravidade").value;
+      if (!gravidade) {
+        mostrarErro("gravidade", "Selecione a gravidade");
+        valido = false;
+      }
+
+      return valido;
+    }
+
+    function mostrarErro(campo, mensagem) {
+      const input = document.getElementById(campo);
+      const erro = document.getElementById(`erro-${campo}`);
+      
+      input.classList.add('campo-erro');
+      erro.textContent = mensagem;
+    }
+  </script>
+</body>
+</html>

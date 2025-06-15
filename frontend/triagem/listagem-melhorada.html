@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pacientes Cadastrados - MedDeque</title>
+  <link rel="stylesheet" href="listagem.css">
+  <link rel="stylesheet" href="../style/components.css">
+</head>
+<body>
+  <div class="container">
+    <h1>📋 Pacientes Cadastrados</h1>
+    
+    <div class="estatisticas" id="estatisticas">
+      <!-- Estatísticas serão inseridas aqui -->
+    </div>
+
+    <div class="filtros" style="margin-bottom: 1rem;">
+      <select id="filtro-gravidade" style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ddd;">
+        <option value="">Todas as gravidades</option>
+        <option value="1">🔴 Alta prioridade</option>
+        <option value="2">🟡 Média prioridade</option>
+        <option value="3">🟢 Baixa prioridade</option>
+      </select>
+      
+      <input type="text" id="busca-nome" placeholder="Buscar por nome..." 
+             style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ddd; margin-left: 1rem;">
+    </div>
+
+    <div id="loading-pacientes" style="text-align: center; padding: 2rem;">
+      <div class="loading"></div>
+      <p>Carregando pacientes...</p>
+    </div>
+
+    <table id="tabela-pacientes" style="display: none;">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>CPF</th>
+          <th>Sintomas</th>
+          <th>Gravidade</th>
+          <th>Data/Hora</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Pacientes serão inseridos aqui -->
+      </tbody>
+    </table>
+
+    <div id="sem-pacientes" style="display: none; text-align: center; padding: 2rem;">
+      <p>Nenhum paciente encontrado.</p>
+    </div>
+
+    <div style="text-align: center; margin-top: 2rem;">
+      <button onclick="window.location.href='triagem-melhorada.html'" class="btn-secundario">
+        ➕ Nova Triagem
+      </button>
+      <button onclick="window.location.href='../index.html'" class="btn-secundario">
+        🏠 Menu Principal
+      </button>
+    </div>
+  </div>
+
+  <script src="../js/utils.js"></script>
+  <script src="../js/api.js"></script>
+  <script>
+    let pacientesOriginais = [];
+    let pacientesFiltrados = [];
+
+    document.addEventListener("DOMContentLoaded", async function() {
+      await carregarPacientes();
+      configurarFiltros();
+    });
+
+    async function carregarPacientes() {
+      const loadingElement = document.getElementById("loading-pacientes");
+      const tabelaElement = document.getElementById("tabela-pacientes");
+      const semPacientesElement = document.getElementById("sem-pacientes");
+
+      try {
+        pacientesOriginais = await ApiService.listarPacientes();
+        pacientesFiltrados = [...pacientesOriginais];
+        
+        loadingElement.style.display = "none";
+        
+        if (pacientesOriginais.length === 0) {
+          semPacientesElement.style.display = "block";
+        } else {
+          tabelaElement.style.display = "table";
+          renderizarPacientes();
+          renderizarEstatisticas();
+        }
+        
+      } catch (error) {
+        loadingElement.style.display = "none";
+        Utils.mostrarNotificacao("Erro ao carregar pacientes", "erro");
+      }
+    }
+
+    function renderizarPacientes() {
+      const tbody = document.querySelector("#tabela-pacientes tbody");
+      tbody.innerHTML = "";
+
+      pacientesFiltrados.forEach(paciente => {
+        const tr = document.createElement("tr");
+        const gravidade = Utils.obterCorGravidade(paciente.gravidade);
+        
+        tr.innerHTML = `
+          <td>${paciente.nome}</td>
+          <td>${Utils.formatarCPF(paciente.cpf)}</td>
+          <td>${paciente.sintomas}</td>
+          <td class="${gravidade.classe}">${gravidade.texto}</td>
+          <td>${new Date().toLocaleString('pt-BR')}</td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderizarEstatisticas() {
+      const estatisticasElement = document.getElementById("estatisticas");
+      
+      const total = pacientesOriginais.length;
+      const alta = pacientesOriginais.filter(p => p.gravidade === 1).length;
+      const media = pacientesOriginais.filter(p => p.gravidade === 2).length;
+      const baixa = pacientesOriginais.filter(p => p.gravidade === 3).length;
+
+      estatisticasElement.innerHTML = `
+        <div class="card-estatistica">
+          <h3>${total}</h3>
+          <p>Total de Pacientes</p>
+        </div>
+        <div class="card-estatistica">
+          <h3 style="color: #f44336;">${alta}</h3>
+          <p>Alta Prioridade</p>
+        </div>
+        <div class="card-estatistica">
+          <h3 style="color: #ff9800;">${media}</h3>
+          <p>Média Prioridade</p>
+        </div>
+        <div class="card-estatistica">
+          <h3 style="color: #4caf50;">${baixa}</h3>
+          <p>Baixa Prioridade</p>
+        </div>
+      `;
+    }
+
+    function configurarFiltros() {
+      const filtroGravidade = document.getElementById("filtro-gravidade");
+      const buscaNome = document.getElementById("busca-nome");
+
+      filtroGravidade.addEventListener("change", aplicarFiltros);
+      buscaNome.addEventListener("input", aplicarFiltros);
+    }
+
+    function aplicarFiltros() {
+      const filtroGravidade = document.getElementById("filtro-gravidade").value;
+      const buscaNome = document.getElementById("busca-nome").value.toLowerCase();
+
+      pacientesFiltrados = pacientesOriginais.filter(paciente => {
+        const matchGravidade = !filtroGravidade || paciente.gravidade.toString() === filtroGravidade;
+        const matchNome = !buscaNome || paciente.nome.toLowerCase().includes(buscaNome);
+        
+        return matchGravidade && matchNome;
+      });
+
+      renderizarPacientes();
+    }
+  </script>
+</body>
+</html>
