@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscar Paciente - MedDeque</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <h1>🔍 Buscar Paciente</h1>
+                <p>Consultar dados por CPF</p>
+            </div>
+        </header>
+
+        <main>
+            <div class="form-container">
+                <form id="form-busca">
+                    <div class="form-group">
+                        <label for="cpf-busca">CPF do Paciente</label>
+                        <input type="text" id="cpf-busca" name="cpf" required 
+                               placeholder="000.000.000-00" maxlength="14">
+                    </div>
+
+                    <div class="d-flex justify-between gap-2">
+                        <button type="button" class="btn btn-secondary" onclick="navegarPara('index.html')">
+                            ← Voltar
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="btn-buscar">
+                            🔍 Buscar Paciente
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="resultado-busca" style="display: none;">
+                <!-- Resultado da busca será exibido aqui -->
+            </div>
+        </main>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('form-busca');
+            const cpfInput = document.getElementById('cpf-busca');
+            const btnBuscar = document.getElementById('btn-buscar');
+
+            // Formatação automática do CPF
+            cpfInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length <= 11) {
+                    e.target.value = MedDeque.formatarCPF(value);
+                }
+            });
+
+            // Submissão do formulário
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const cpf = cpfInput.value.replace(/\D/g, '');
+
+                if (!MedDeque.validarCPF(cpf)) {
+                    MedDeque.mostrarNotificacao('CPF inválido', 'error');
+                    return;
+                }
+
+                // Mostrar loading
+                const textoOriginal = btnBuscar.innerHTML;
+                btnBuscar.disabled = true;
+                btnBuscar.innerHTML = '<div class="loading"></div> Buscando...';
+
+                try {
+                    const paciente = await MedDeque.buscarPaciente(cpf);
+                    exibirResultado(paciente);
+                    
+                } catch (error) {
+                    MedDeque.mostrarNotificacao('Paciente não encontrado', 'warning');
+                    document.getElementById('resultado-busca').style.display = 'none';
+                } finally {
+                    btnBuscar.disabled = false;
+                    btnBuscar.innerHTML = textoOriginal;
+                }
+            });
+        });
+
+        function exibirResultado(paciente) {
+            const container = document.getElementById('resultado-busca');
+            
+            container.innerHTML = `
+                <div class="form-container">
+                    <h3>📋 Dados do Paciente</h3>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                        <div>
+                            <strong>Nome:</strong><br>
+                            ${paciente.nome}
+                        </div>
+                        <div>
+                            <strong>CPF:</strong><br>
+                            ${MedDeque.formatarCPF(paciente.cpf)}
+                        </div>
+                        <div>
+                            <strong>Status:</strong><br>
+                            <span class="status-badge ${MedDeque.obterClasseStatus(paciente.status)}">
+                                ${MedDeque.obterTextoStatus(paciente.status)}
+                            </span>
+                        </div>
+                        ${paciente.gravidade ? `
+                        <div>
+                            <strong>Gravidade:</strong><br>
+                            <span class="${MedDeque.obterCorGravidade(paciente.gravidade)}">
+                                ${MedDeque.obterTextoGravidade(paciente.gravidade)}
+                            </span>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <div style="margin-bottom: 2rem;">
+                        <strong>Sintomas:</strong><br>
+                        <div style="background: var(--light-bg); padding: 1rem; border-radius: 8px; margin-top: 0.5rem;">
+                            ${paciente.sintomas}
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <div>
+                            <strong>Data/Hora Cadastro:</strong><br>
+                            ${MedDeque.formatarDataHora(paciente.dataHoraCadastro)}
+                        </div>
+                        ${paciente.dataHoraTriagem ? `
+                        <div>
+                            <strong>Data/Hora Triagem:</strong><br>
+                            ${MedDeque.formatarDataHora(paciente.dataHoraTriagem)}
+                        </div>
+                        ` : ''}
+                        ${paciente.dataHoraAtendimento ? `
+                        <div>
+                            <strong>Data/Hora Atendimento:</strong><br>
+                            ${MedDeque.formatarDataHora(paciente.dataHoraAtendimento)}
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    ${obterAcoesDisponiveis(paciente)}
+                </div>
+            `;
+            
+            container.style.display = 'block';
+        }
+
+        function obterAcoesDisponiveis(paciente) {
+            let acoes = '<div class="d-flex gap-2 mt-3">';
+            
+            switch (paciente.status) {
+                case 'AGUARDANDO_TRIAGEM':
+                    acoes += `<button class="btn btn-primary" onclick="navegarPara('triagem.html')">Realizar Triagem</button>`;
+                    break;
+                case 'TRIADO':
+                    acoes += `<button class="btn btn-success" onclick="chamarPacienteEspecifico('${paciente.cpf}')">Chamar para Atendimento</button>`;
+                    break;
+                case 'ATENDIDO':
+                    acoes += `<button class="btn btn-warning" onclick="finalizarAtendimentoEspecifico('${paciente.cpf}')">Finalizar Atendimento</button>`;
+                    break;
+                case 'FINALIZADO':
+                    acoes += `<span style="color: var(--success-color); font-weight: bold;">✅ Atendimento Finalizado</span>`;
+                    break;
+            }
+            
+            acoes += '</div>';
+            return acoes;
+        }
+
+        async function chamarPacienteEspecifico(cpf) {
+            try {
+                // Nota: Esta funcionalidade requer implementação específica no backend
+                // para chamar um paciente específico ao invés do próximo da fila
+                MedDeque.mostrarNotificacao('Use o Dashboard para chamar pacientes em ordem de prioridade', 'warning');
+                navegarPara('dashboard.html');
+            } catch (error) {
+                MedDeque.mostrarNotificacao('Erro ao chamar paciente', 'error');
+            }
+        }
+
+        async function finalizarAtendimentoEspecifico(cpf) {
+            if (!confirm('Deseja finalizar o atendimento deste paciente?')) {
+                return;
+            }
+
+            try {
+                await MedDeque.finalizarAtendimento(cpf);
+                MedDeque.mostrarNotificacao('Atendimento finalizado com sucesso!', 'success');
+                
+                // Recarregar dados do paciente
+                const paciente = await MedDeque.buscarPaciente(cpf);
+                exibirResultado(paciente);
+                
+            } catch (error) {
+                MedDeque.mostrarNotificacao('Erro ao finalizar atendimento', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,40 +1,65 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MedDeque - Sistema de Triagem</title>
-  <link rel="stylesheet" href="style/index.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedDeque - Sistema Inteligente de Triagem</title>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
-<script>
-document.querySelector("form").addEventListener("submit", function (e) {
-  e.preventDefault();
-
-  const nome = document.querySelector("input[name='nome']").value;
-  const cpf = document.querySelector("input[name='cpf']").value;
-  const sintomas = document.querySelector("textarea[name='sintomas']").value;
-  const gravidade = parseInt(document.querySelector("select[name='gravidade']").value);
-
-  const novoPaciente = { nome, cpf, sintomas, gravidade };
-
-  const pacientes = JSON.parse(localStorage.getItem("pacientes")) || [];
-  pacientes.push(novoPaciente);
-  localStorage.setItem("pacientes", JSON.stringify(pacientes));
-
-  alert("Triagem registrada com sucesso!");
-  document.querySelector("form").reset();
-});
-</script>
 <body>
-  <div class="container">
-  <img src="img/Med.png" alt="Logo MedDeque" class="logo-icon">
-  <h1 class="title">SISTEMA DE TRIAGEM</h1>
-  <button class="menu-button" onclick="window.location.href='triagem/triagem.html'">Iniciar Triagem</button>
-  <button class="menu-button" onclick="window.location.href='triagem/listagem.html'">
-  Histórico de Pacientes
-  </button>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <h1>🏥 MedDeque</h1>
+                <p>Sistema Inteligente de Triagem Médica</p>
+            </div>
+        </header>
 
-</div>
+        <main class="main-menu">
+            <div class="menu-grid">
+                <div class="menu-card" onclick="navegarPara('cadastro.html')">
+                    <div class="card-icon">👤</div>
+                    <h3>Cadastrar Paciente</h3>
+                    <p>Registrar novo paciente na fila de espera</p>
+                </div>
 
+                <div class="menu-card" onclick="navegarPara('triagem.html')">
+                    <div class="card-icon">🩺</div>
+                    <h3>Realizar Triagem</h3>
+                    <p>Classificar pacientes por gravidade</p>
+                </div>
+
+                <div class="menu-card" onclick="navegarPara('atendimento.html')">
+                    <div class="card-icon">🏥</div>
+                    <h3>Gerenciar Atendimento</h3>
+                    <p>Chamar e atender pacientes</p>
+                </div>
+
+                <div class="menu-card" onclick="navegarPara('dashboard.html')">
+                    <div class="card-icon">📊</div>
+                    <h3>Dashboard</h3>
+                    <p>Visualizar estatísticas e filas</p>
+                </div>
+
+                <div class="menu-card" onclick="navegarPara('buscar.html')">
+                    <div class="card-icon">🔍</div>
+                    <h3>Buscar Paciente</h3>
+                    <p>Consultar dados por CPF</p>
+                </div>
+
+                <div class="menu-card" onclick="navegarPara('historico.html')">
+                    <div class="card-icon">📋</div>
+                    <h3>Histórico</h3>
+                    <p>Ver todos os atendimentos</p>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2024 MedDeque - Sistema desenvolvido com estruturas de dados otimizadas</p>
+        </footer>
+    </div>
+
+    <script src="js/main.js"></script>
 </body>
 </html>

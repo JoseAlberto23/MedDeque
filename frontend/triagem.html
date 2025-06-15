@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realizar Triagem - MedDeque</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <h1>🩺 Realizar Triagem</h1>
+                <p>Classificar pacientes por gravidade</p>
+            </div>
+        </header>
+
+        <main>
+            <!-- Fila de Espera -->
+            <div class="form-container">
+                <h3>📋 Fila de Espera para Triagem</h3>
+                <div id="fila-espera-container">
+                    <div class="loading"></div>
+                </div>
+            </div>
+
+            <!-- Formulário de Triagem -->
+            <div class="form-container" id="triagem-form" style="display: none;">
+                <h3>🏥 Classificação de Risco</h3>
+                <div id="paciente-info"></div>
+                
+                <div class="form-group">
+                    <label for="gravidade">Classificação de Gravidade *</label>
+                    <select id="gravidade" name="gravidade" required>
+                        <option value="">Selecione a classificação</option>
+                        <option value="1">🔴 Vermelho - Emergência (Risco de vida imediato)</option>
+                        <option value="2">🟡 Amarelo - Urgência (Risco moderado)</option>
+                        <option value="3">🟢 Verde - Pouco Urgente (Sem risco imediato)</option>
+                    </select>
+                </div>
+
+                <div class="d-flex justify-between gap-2">
+                    <button type="button" class="btn btn-secondary" onclick="cancelarTriagem()">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btn-triar" onclick="confirmarTriagem()">
+                        Confirmar Triagem
+                    </button>
+                </div>
+            </div>
+
+            <!-- Informações sobre Classificação -->
+            <div class="form-container">
+                <h3>ℹ️ Critérios de Classificação</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    <div style="padding: 1rem; border-left: 4px solid var(--danger-color); background: #fff5f5;">
+                        <h4 style="color: var(--danger-color);">🔴 Vermelho - Emergência</h4>
+                        <p>Situações que colocam a vida em risco imediato. Atendimento imediato.</p>
+                        <small>Ex: Parada cardíaca, trauma grave, dificuldade respiratória severa</small>
+                    </div>
+                    
+                    <div style="padding: 1rem; border-left: 4px solid var(--warning-color); background: #fffbf0;">
+                        <h4 style="color: var(--warning-color);">🟡 Amarelo - Urgência</h4>
+                        <p>Situações urgentes que podem evoluir para risco de vida.</p>
+                        <small>Ex: Dor intensa, febre alta, vômitos persistentes</small>
+                    </div>
+                    
+                    <div style="padding: 1rem; border-left: 4px solid var(--success-color); background: #f0fff4;">
+                        <h4 style="color: var(--success-color);">🟢 Verde - Pouco Urgente</h4>
+                        <p>Situações que podem aguardar sem risco significativo.</p>
+                        <small>Ex: Consultas de rotina, sintomas leves, renovação de receitas</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-between">
+                <button class="btn btn-secondary" onclick="navegarPara('index.html')">
+                    🏠 Menu Principal
+                </button>
+                <button class="btn btn-primary" onclick="navegarPara('dashboard.html')">
+                    📊 Ver Dashboard
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        let pacienteAtual = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarFilaEspera();
+            
+            // Atualizar fila a cada 30 segundos
+            setInterval(carregarFilaEspera, 30000);
+        });
+
+        async function carregarFilaEspera() {
+            const container = document.getElementById('fila-espera-container');
+            
+            try {
+                const filaEspera = await MedDeque.getFilaEspera();
+                
+                if (filaEspera.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center" style="padding: 2rem;">
+                            <p style="color: var(--text-light); font-size: 1.1rem;">
+                                ✅ Não há pacientes aguardando triagem
+                            </p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '<div class="table-container"><table class="table">';
+                html += `
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>CPF</th>
+                            <th>Sintomas</th>
+                            <th>Chegada</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                `;
+
+                filaEspera.forEach(paciente => {
+                    html += `
+                        <tr>
+                            <td><strong>${paciente.nome}</strong></td>
+                            <td>${MedDeque.formatarCPF(paciente.cpf)}</td>
+                            <td>${paciente.sintomas.substring(0, 50)}${paciente.sintomas.length > 50 ? '...' : ''}</td>
+                            <td>${MedDeque.formatarDataHora(paciente.dataHoraCadastro)}</td>
+                            <td>
+                                <button class="btn btn-primary" onclick="iniciarTriagem('${paciente.cpf}')">
+                                    Triar
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="text-center" style="padding: 2rem;">
+                        <p style="color: var(--danger-color);">
+                            ❌ Erro ao carregar fila de espera
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        async function iniciarTriagem(cpf) {
+            try {
+                const paciente = await MedDeque.buscarPaciente(cpf);
+                pacienteAtual = paciente;
+                
+                const infoDiv = document.getElementById('paciente-info');
+                infoDiv.innerHTML = `
+                    <div style="background: var(--light-bg); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <h4>Paciente: ${paciente.nome}</h4>
+                        <p><strong>CPF:</strong> ${MedDeque.formatarCPF(paciente.cpf)}</p>
+                        <p><strong>Sintomas:</strong> ${paciente.sintomas}</p>
+                        <p><strong>Chegada:</strong> ${MedDeque.formatarDataHora(paciente.dataHoraCadastro)}</p>
+                    </div>
+                `;
+                
+                document.getElementById('triagem-form').style.display = 'block';
+                document.getElementById('gravidade').focus();
+                
+            } catch (error) {
+                MedDeque.mostrarNotificacao('Erro ao carregar dados do paciente', 'error');
+            }
+        }
+
+        async function confirmarTriagem() {
+            const gravidade = document.getElementById('gravidade').value;
+            
+            if (!gravidade) {
+                MedDeque.mostrarNotificacao('Selecione a classificação de gravidade', 'warning');
+                return;
+            }
+
+            const btnTriar = document.getElementById('btn-triar');
+            const textoOriginal = btnTriar.innerHTML;
+            
+            btnTriar.disabled = true;
+            btnTriar.innerHTML = '<div class="loading"></div> Processando...';
+
+            try {
+                await MedDeque.realizarTriagem(parseInt(gravidade));
+                
+                const textoGravidade = MedDeque.obterTextoGravidade(parseInt(gravidade));
+                MedDeque.mostrarNotificacao(
+                    `Triagem realizada! Paciente classificado como: ${textoGravidade}`, 
+                    'success'
+                );
+                
+                // Reset form
+                cancelarTriagem();
+                carregarFilaEspera();
+                
+            } catch (error) {
+                MedDeque.mostrarNotificacao(error.message || 'Erro ao realizar triagem', 'error');
+            } finally {
+                btnTriar.disabled = false;
+                btnTriar.innerHTML = textoOriginal;
+            }
+        }
+
+        function cancelarTriagem() {
+            document.getElementById('triagem-form').style.display = 'none';
+            document.getElementById('gravidade').value = '';
+            pacienteAtual = null;
+        }
+    </script>
+</body>
+</html>

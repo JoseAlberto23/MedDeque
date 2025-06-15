@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico - MedDeque</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <h1>📋 Histórico de Atendimentos</h1>
+                <p>Visualizar todos os pacientes cadastrados</p>
+            </div>
+        </header>
+
+        <main>
+            <!-- Filtros -->
+            <div class="form-container">
+                <h3>🔍 Filtros</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div class="form-group">
+                        <label for="filtro-status">Status</label>
+                        <select id="filtro-status">
+                            <option value="">Todos os status</option>
+                            <option value="AGUARDANDO_TRIAGEM">Aguardando Triagem</option>
+                            <option value="TRIADO">Triado</option>
+                            <option value="ATENDIDO">Em Atendimento</option>
+                            <option value="FINALIZADO">Finalizado</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="filtro-gravidade">Gravidade</label>
+                        <select id="filtro-gravidade">
+                            <option value="">Todas as gravidades</option>
+                            <option value="1">🔴 Vermelho (Crítico)</option>
+                            <option value="2">🟡 Amarelo (Urgente)</option>
+                            <option value="3">🟢 Verde (Pouco Urgente)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="busca-nome">Buscar por nome</label>
+                        <input type="text" id="busca-nome" placeholder="Digite o nome...">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-primary" onclick="aplicarFiltros()">
+                            🔍 Filtrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Pacientes -->
+            <div class="form-container">
+                <div class="d-flex justify-between align-center mb-2">
+                    <h3>👥 Pacientes</h3>
+                    <button class="btn btn-secondary" onclick="carregarTodosPacientes()">
+                        🔄 Atualizar
+                    </button>
+                </div>
+                
+                <div id="pacientes-container">
+                    <div class="loading"></div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-between">
+                <button class="btn btn-secondary" onclick="navegarPara('index.html')">
+                    🏠 Menu Principal
+                </button>
+                <button class="btn btn-primary" onclick="navegarPara('dashboard.html')">
+                    📊 Dashboard
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        let todosPacientes = [];
+        let pacientesFiltrados = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarTodosPacientes();
+            configurarFiltros();
+        });
+
+        async function carregarTodosPacientes() {
+            const container = document.getElementById('pacientes-container');
+            
+            try {
+                todosPacientes = await MedDeque.getTodosPacientes();
+                pacientesFiltrados = [...todosPacientes];
+                
+                exibirPacientes();
+                
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="text-center" style="padding: 2rem;">
+                        <p style="color: var(--danger-color);">❌ Erro ao carregar histórico</p>
+                    </div>
+                `;
+            }
+        }
+
+        function configurarFiltros() {
+            const filtroStatus = document.getElementById('filtro-status');
+            const filtroGravidade = document.getElementById('filtro-gravidade');
+            const buscaNome = document.getElementById('busca-nome');
+
+            // Aplicar filtros automaticamente quando houver mudança
+            filtroStatus.addEventListener('change', aplicarFiltros);
+            filtroGravidade.addEventListener('change', aplicarFiltros);
+            buscaNome.addEventListener('input', debounce(aplicarFiltros, 500));
+        }
+
+        function aplicarFiltros() {
+            const filtroStatus = document.getElementById('filtro-status').value;
+            const filtroGravidade = document.getElementById('filtro-gravidade').value;
+            const buscaNome = document.getElementById('busca-nome').value.toLowerCase();
+
+            pacientesFiltrados = todosPacientes.filter(paciente => {
+                const matchStatus = !filtroStatus || paciente.status === filtroStatus;
+                const matchGravidade = !filtroGravidade || paciente.gravidade?.toString() === filtroGravidade;
+                const matchNome = !buscaNome || paciente.nome.toLowerCase().includes(buscaNome);
+                
+                return matchStatus && matchGravidade && matchNome;
+            });
+
+            exibirPacientes();
+        }
+
+        function exibirPacientes() {
+            const container = document.getElementById('pacientes-container');
+            
+            if (pacientesFiltrados.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center" style="padding: 2rem;">
+                        <p style="color: var(--text-light); font-size: 1.1rem;">
+                            📭 Nenhum paciente encontrado com os filtros aplicados
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Ordenar por data de cadastro (mais recente primeiro)
+            pacientesFiltrados.sort((a, b) => new Date(b.dataHoraCadastro) - new Date(a.dataHoraCadastro));
+
+            let html = '<div class="table-container"><table class="table">';
+            html += `
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>CPF</th>
+                        <th>Status</th>
+                        <th>Gravidade</th>
+                        <th>Cadastro</th>
+                        <th>Triagem</th>
+                        <th>Atendimento</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+
+            pacientesFiltrados.forEach(paciente => {
+                html += `
+                    <tr>
+                        <td><strong>${paciente.nome}</strong></td>
+                        <td>${MedDeque.formatarCPF(paciente.cpf)}</td>
+                        <td>
+                            <span class="status-badge ${MedDeque.obterClasseStatus(paciente.status)}">
+                                ${MedDeque.obterTextoStatus(paciente.status)}
+                            </span>
+                        </td>
+                        <td>
+                            ${paciente.gravidade ? 
+                                `<span class="${MedDeque.obterCorGravidade(paciente.gravidade)}">${MedDeque.obterTextoGravidade(paciente.gravidade)}</span>` 
+                                : '-'
+                            }
+                        </td>
+                        <td>${MedDeque.formatarDataHora(paciente.dataHoraCadastro)}</td>
+                        <td>${MedDeque.formatarDataHora(paciente.dataHoraTriagem)}</td>
+                        <td>${MedDeque.formatarDataHora(paciente.dataHoraAtendimento)}</td>
+                        <td>
+                            <button class="btn btn-primary" onclick="verDetalhes('${paciente.cpf}')" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">
+                                Ver
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table></div>';
+            
+            // Adicionar resumo
+            html += `
+                <div style="margin-top: 1rem; padding: 1rem; background: var(--light-bg); border-radius: 8px;">
+                    <strong>Resumo:</strong> ${pacientesFiltrados.length} paciente(s) encontrado(s)
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        function verDetalhes(cpf) {
+            // Redirecionar para a página de busca com o CPF preenchido
+            localStorage.setItem('cpf-busca', cpf);
+            navegarPara('buscar.html');
+        }
+
+        // Função utilitária para debounce
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Verificar se há CPF para busca (vindo de outra página)
+        document.addEventListener('DOMContentLoaded', function() {
+            const cpfBusca = localStorage.getItem('cpf-busca');
+            if (cpfBusca) {
+                localStorage.removeItem('cpf-busca');
+                // Se estiver na página de busca, preencher o campo
+                if (window.location.pathname.includes('buscar.html')) {
+                    document.getElementById('cpf-busca').value = MedDeque.formatarCPF(cpfBusca);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

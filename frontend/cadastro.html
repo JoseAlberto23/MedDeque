@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Paciente - MedDeque</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <h1>👤 Cadastrar Paciente</h1>
+                <p>Registrar novo paciente na fila de espera</p>
+            </div>
+        </header>
+
+        <main>
+            <div class="form-container">
+                <form id="form-cadastro">
+                    <div class="form-group">
+                        <label for="nome">Nome Completo *</label>
+                        <input type="text" id="nome" name="nome" required 
+                               placeholder="Digite o nome completo do paciente">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cpf">CPF *</label>
+                        <input type="text" id="cpf" name="cpf" required 
+                               placeholder="000.000.000-00" maxlength="14">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sintomas">Sintomas e Queixas *</label>
+                        <textarea id="sintomas" name="sintomas" required 
+                                  placeholder="Descreva os sintomas apresentados pelo paciente..."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-between gap-2">
+                        <button type="button" class="btn btn-secondary" onclick="voltar()">
+                            ← Voltar
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="btn-cadastrar">
+                            Cadastrar Paciente
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="form-container">
+                <h3>ℹ️ Informações Importantes</h3>
+                <ul style="margin-left: 2rem; line-height: 1.8;">
+                    <li>O paciente será inserido na <strong>fila de espera</strong> para triagem</li>
+                    <li>Após o cadastro, o paciente deve aguardar a <strong>classificação de risco</strong></li>
+                    <li>A triagem determinará a <strong>prioridade de atendimento</strong></li>
+                    <li>Todos os campos marcados com * são obrigatórios</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('form-cadastro');
+            const cpfInput = document.getElementById('cpf');
+            const btnCadastrar = document.getElementById('btn-cadastrar');
+
+            // Formatação automática do CPF
+            cpfInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length <= 11) {
+                    e.target.value = MedDeque.formatarCPF(value);
+                }
+            });
+
+            // Submissão do formulário
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const nome = document.getElementById('nome').value.trim();
+                const cpf = document.getElementById('cpf').value.replace(/\D/g, '');
+                const sintomas = document.getElementById('sintomas').value.trim();
+
+                // Validações
+                if (nome.length < 2) {
+                    MedDeque.mostrarNotificacao('Nome deve ter pelo menos 2 caracteres', 'error');
+                    return;
+                }
+
+                if (!MedDeque.validarCPF(cpf)) {
+                    MedDeque.mostrarNotificacao('CPF inválido', 'error');
+                    return;
+                }
+
+                if (sintomas.length < 10) {
+                    MedDeque.mostrarNotificacao('Descreva os sintomas com mais detalhes', 'error');
+                    return;
+                }
+
+                // Mostrar loading
+                const textoOriginal = btnCadastrar.innerHTML;
+                btnCadastrar.disabled = true;
+                btnCadastrar.innerHTML = '<div class="loading"></div> Cadastrando...';
+
+                try {
+                    const paciente = { nome, cpf, sintomas };
+                    await MedDeque.cadastrarPaciente(paciente);
+                    
+                    MedDeque.mostrarNotificacao('Paciente cadastrado com sucesso!', 'success');
+                    form.reset();
+                    
+                    // Redirecionar após 2 segundos
+                    setTimeout(() => {
+                        navegarPara('triagem.html');
+                    }, 2000);
+
+                } catch (error) {
+                    MedDeque.mostrarNotificacao(error.message || 'Erro ao cadastrar paciente', 'error');
+                } finally {
+                    btnCadastrar.disabled = false;
+                    btnCadastrar.innerHTML = textoOriginal;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
